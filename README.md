@@ -3,21 +3,22 @@
 Scripts to run my assembly pipline.
 
 Steps include:
-	1. assembly
-	2. contamination filtering
-	3. detection and removal of haplotigs
-	4. long read polishing
-	5. short read polishing
-	6. busco validation
+1. filter reads
+2. assembly
+3. contamination filtering
+4. detection and removal of haplotigs
+5. long read polishing
+6. short read polishing
+7. busco validation
 
 Tools used:
-	Canu
-	BLAST
-	Blobtools
-	minimap
-	bwa
-	bioawk
-	seqtk
-	Racon
-	Pilon
-	
+- Canu
+- BLAST
+- Blobtools
+- minimap
+- bwa
+- bioawk
+- seqtk
+- Racon
+- Pilon
+- NanoPack
