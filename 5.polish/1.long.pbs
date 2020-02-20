@@ -1,0 +1,89 @@
+#!/bin/bash
+
+if [ -f polish_long.lst ]; then
+    echo "polish_long.lst exist - proceed"
+else 
+    echo "polish_long.lst does not exist and will be created. You should edit this, then rerun."
+    touch polish_long.lst
+
+    find . -name '*curated.fasta' >> polish_long.lst
+	exit 0
+fi
+
+
+pwd=`pwd`
+for fna in `cat polish_long.lst`
+do
+	cd $pwd #reset
+
+	tmp=$(dirname "${fna}")
+	baseDir=${tmp%/*} # base directory of assembly, location to run polishing from
+	tmp=${baseDir%/*}
+	name=${tmp#./} # name to save under and to find reads
+	
+	
+	# find long reads to polish with
+	reads=`find /g/data/xe2/scott/assembly/fastq -name '*final.fastq*' | grep $name`
+	readsFileExt=$(basename "$reads")
+	readsFile="${readsFileExt%.*}"
+	
+	echo $baseDir
+	cd $baseDir
+	mkdir -p 4.polish_long
+	cd 4.polish_long
+
+	echo "#!/bin/bash" > racon_polish.pbs
+	echo "#PBS -P xe2" >> racon_polish.pbs
+	echo "#PBS -q hugemem" >> racon_polish.pbs
+	echo "#PBS -l walltime=12:00:00" >> racon_polish.pbs
+	echo "#PBS -l mem=1000GB" >> racon_polish.pbs
+	echo "#PBS -l jobfs=1000GB" >> racon_polish.pbs
+	echo "#PBS -l ncpus=24" >> racon_polish.pbs
+	echo "#PBS -l storage=scratch/xe2+gdata/xe2" >> racon_polish.pbs
+	echo "#PBS -l wd" >> racon_polish.pbs
+	echo "#PBS -N $name" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+	echo "set -euo pipefail # safe mode" >> racon_polish.pbs
+	echo "set -x # logging" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+	echo 'set +u' >> racon_polish.pbs
+	echo 'eval "$(/g/data/xe2/gadi/conda/bin/conda shell.zsh hook)" ##useconda' >> racon_polish.pbs
+	echo "conda activate genome-assembly" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+	echo 'set -u' >> racon_polish.pbs
+
+	echo "LAST=curated.fasta" >> racon_polish.pbs
+	echo "CURRENT=racon_1.fasta" >> racon_polish.pbs
+	echo "READS=$readsFile" >> racon_polish.pbs
+	echo "SAVE_DIR=${name}_racon" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+
+	## copy to working dir (want assemblies to be on scratch so that we can continue if time runs out)
+	echo "mkdir -p /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}" >> racon_polish.pbs
+	echo "cp $pwd/$fna /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}" >> racon_polish.pbs
+	echo "cp ${reads} \${PBS_JOBFS}" >> racon_polish.pbs
+	echo "gunzip \${PBS_JOBFS}/\${READS}.gz" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+
+	## map long reads with minimap2
+	echo "/g/data/xe2/scott/gadi_modules/minimap2_2.17_cascade/minimap2 -t \${PBS_NCPUS} -ax map-ont /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${LAST} \${PBS_JOBFS}/\${READS} > \${PBS_JOBFS}/mapped_reads.sam" >> racon_polish.pbs
+	#echo "samtools sort -T \${PBS_JOBFS}/sort_tmp -@ \${PBS_NCPUS} \${PBS_JOBFS}/mapped_reads.sam > \${PBS_JOBFS}/sorted_mapped_reads.bam" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+
+	## run racon
+	echo "/g/data/xe2/scott/gadi_modules/racon/intel/bin/racon -t \${PBS_NCPUS} -u \${PBS_JOBFS}/\${READS} \${PBS_JOBFS}/mapped_reads.sam /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${LAST} > /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${CURRENT}" >> racon_polish.pbs
+
+	echo "for i in {2..5}" >> racon_polish.pbs
+	echo "do" >> racon_polish.pbs
+	echo "    echo 'Polishing iteration:'\${i}" >> racon_polish.pbs
+	echo "    LAST=\${CURRENT}" >> racon_polish.pbs
+	echo "    CURRENT=racon_\${i}.fasta" >> racon_polish.pbs
+	echo "    /g/data/xe2/scott/gadi_modules/minimap2_2.17_cascade/minimap2 -t \${PBS_NCPUS} -ax map-ont /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${LAST} \${PBS_JOBFS}/\${READS} > \${PBS_JOBFS}/mapped_reads.sam" >> racon_polish.pbs
+	#echo "    samtools sort -T \${PBS_JOBFS}/sort_tmp -@ \${PBS_NCPUS} \${PBS_JOBFS}/mapped_reads.sam > \${PBS_JOBFS}/sorted_mapped_reads.bam" >> racon_polish.pbs
+	echo "" >> racon_polish.pbs
+	echo "    /g/data/xe2/scott/gadi_modules/racon/intel/bin/racon -t \${PBS_NCPUS} -u \${PBS_JOBFS}/\${READS} \${PBS_JOBFS}/mapped_reads.sam /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${LAST} > /scratch/\${PROJECT}/\${USER}/\${SAVE_DIR}/\${CURRENT}" >> racon_polish.pbs
+	echo "done" >> racon_polish.pbs
+	
+	qsub racon_polish.pbs
+done
+

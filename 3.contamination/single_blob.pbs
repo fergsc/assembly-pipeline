@@ -1,0 +1,50 @@
+#!/bin/bash
+#PBS -P ${PROJECT}
+#PBS -q normal
+#PBS -l walltime=48:00:00
+#PBS -l mem=4G
+#PBS -l jobfs=400GB
+#PBS -l ncpus=1
+#PBS -l storage=scratch/xe2+gdata/xe2
+#PBS -l wd
+
+set -euo pipefail # safe mode
+set -x # logging
+
+
+## set up
+ASSEMBLY=
+ASSEMBLY_DIR=
+NCBI_NT=/scratch/xe2/sf3809/NCBI_nt_v5
+
+## copy to PBS_jobs
+echo ---copy to---
+cp ${ASSEMBLY_DIR}/${ASSEMBLY} ${PBS_JOBFS}
+cp sorted_mapped_reads.* ${PBS_JOBFS}
+
+echo ---blastn---
+blastn \
+ -query ${PBS_JOBFS}/${ASSEMBLY} \
+ -db ${NCBI_NT} \
+ -outfmt '6 qseqid staxids bitscore std' \
+ -max_target_seqs 10 \
+ -max_hsps 1 \
+ -evalue 1e-25 \
+ -out blast.out
+
+echo ---create---
+blobtools create \
+ -i ${PBS_JOBFS}/${ASSEMBLY} \
+ -b sorted_mapped_reads.bam \
+ -t blast.out \
+ -o contamination
+
+echo ---view---
+blobtools view \
+ -i contamination.blobDB.json \
+ -o blobV
+
+echo ---plot---
+blobtools plot \
+ -i contamination.blobDB.json \
+ -o blobP

@@ -1,0 +1,32 @@
+#!/bin/bash
+#PBS -P xe2
+#PBS -q normal
+#PBS -l walltime=10:00:00
+#PBS -l mem=4G
+#PBS -l jobfs=400GB
+#PBS -l ncpus=1
+#PBS -l storage=scratch/xe2+gdata/xe2
+#PBS -l wd
+
+set -euo pipefail # safe mode
+set -x # logging
+
+# /scratch/${PROJECT}/${USER}
+# ${PBS_NCPUS}  ${PBS_JOBFS}
+
+ASSEMBLY=keep.fasta
+ASSEMBLY_DIR=
+LOW=
+MID=
+HIGH=
+
+
+echo '---copy to---'
+cp ${ASSEMBLY_DIR}/${ASSEMBLY} ${PBS_JOBFS}
+cp aligned.bam.gencov ${PBS_JOBFS}
+
+echo '---contigcov---'
+purge_haplotigs  contigcov -i ${PBS_JOBFS}/aligned.bam.gencov -l ${LOW} -m ${MID} -h ${HIGH}
+
+echo '---purge---'
+purge_haplotigs  purge  -g ${ASSEMBLY} -c coverage_stats.csv -b aligned.bam -d

@@ -1,0 +1,33 @@
+#!/bin/bash
+#PBS -P xe2
+#PBS -q normal
+#PBS -l walltime=24:00:00
+#PBS -l mem=32G
+#PBS -l jobfs=400GB
+#PBS -l ncpus=8
+#PBS -l storage=gdata/xe2
+#PBS -l wd
+
+set -euo pipefail # safe mode
+set -x # logging
+
+# /scratch/${PROJECT}/${USER}
+# ${PBS_NCPUS}  ${PBS_JOBFS}
+
+
+ASSEMBLY=keep.fasta
+ASSEMBLY_DIR=
+READS=/home/scottf/assembly/E_mell_dip_canu/assemble.fastq
+
+
+echo '---minimap2---'
+minimap2 -t ${PBS_NCPUS} -ax map-ont ${ASSEMBLY} ${READS} > ${PBS_JOBFS}/aligned.sam
+samtools view -@ ${PBS_NCPUS} -hF 256 ${PBS_JOBFS}/aligned.sam > ${PBS_JOBFS}/filtered.sam
+samtools sort -T {PBS_JOBFS}/sort_tmp -@ ${PBS_NCPUS} ${PBS_JOBFS}filtered.sam > ${PBS_JOBFS}aligned.bam
+
+### 1
+echo '---readhist---'
+# ouput will be saved to your working directory
+purge_haplotigs readhist -b ${PBS_JOBFS}aligned.bam  -g ${PBS_JOBFS}${ASSEMBLY} -t ${PBS_NCPUS}
+
+cp ${PBS_JOBFS}aligned.bam .

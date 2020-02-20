@@ -1,0 +1,42 @@
+#!/bin/bash
+#PBS -P xe2
+#PBS -q normal
+#PBS -l walltime=18:00:00
+#PBS -l mem=32G
+#PBS -l jobfs=400GB
+#PBS -l ncpus=1
+## The job will be executed from current working directory instead of home.
+#PBS -l wd
+
+set -euo pipefail # safe mode
+set -x # logging
+
+SAVE_DIR=xxx
+FASTQ=xxx # dont add .fastq. Modify Nanolyse - zcat/cat and .fastq.gz/.fastq.
+FASTQ_DIR=xxx
+DNA_CS=xxx
+MIN_SIZE=1000
+MIN_QUALITY=7
+
+
+module load python3/3.6.7
+
+## copy to working dir
+cp ${FASTQ_DIR}/${FASTQ} ${PBS_JOBFS}
+
+## filt & trim
+zcat ${PBS_JOBFS}/${FASTQ}.fastq.gz       | NanoLyse -r ${DNA_CS}  > ${PBS_JOBFS}/${FASTQ}_cs.fastq
+cat ${PBS_JOBFS}/${FASTQ}_cs.fastq 		  | NanoFilt --headcrop 200 --tailcrop 200 > ${PBS_JOBFS}/${FASTQ}_cs_trim.fastq
+cat ${PBS_JOBFS}/${FASTQ}_cs_trim.fastq   | NanoFilt -q ${MIN_QUALITY}	> ${PBS_JOBFS}/${FASTQ}_q7.fastq
+cat ${PBS_JOBFS}/${FASTQ}_q7.fastq        | NanoFilt -l ${MIN_SIZE}		> ${PBS_JOBFS}/${FASTQ}_final.fastq
+
+## gather stats and plot the final trimmed and filtered fastq
+NanoPlot --fastq ${PBS_JOBFS}/${FASTQ}_final.fastq	-o /short/${PROJECT}/${USER}/${FASTQ}_final_plots
+
+gzip ${PBS_JOBFS}/${FASTQ}_cs_trim.fastq
+gzip ${PBS_JOBFS}/${FASTQ}_q7.fastq
+gzip ${PBS_JOBFS}/${FASTQ}_final.fastq
+
+cp ${PBS_JOBFS}/${FASTQ}_cs_trim.fastq.gz .
+cp ${PBS_JOBFS}/${FASTQ}_q7.fastq.gz .
+cp ${PBS_JOBFS}/${FASTQ}_final.fastq.gz .
