@@ -24,8 +24,8 @@ cp ${ASSEMBLY_DIR}/${ASSEMBLY} ${PBS_JOBFS}
 cp ${READS_DIR}/${READS} ${PBS_JOBFS}
 
 echo ---minimap2---
-minimap2 -t ${PBS_NCPUS} -ax map-ont ${PBS_JOBFS}/${ASSEMBLY} ${PBS_JOBFS}/${READS} > ${PBS_JOBFS}/mapped_reads.sam
-samtools sort -T ${PBS_JOBFS}/sort_tmp -@ ${PBS_NCPUS} ${PBS_JOBFS}/mapped_reads.sam > ${PBS_JOBFS}/sorted_mapped_reads.bam
+minimap2 -t ${PBS_NCPUS} -ax map-ont ${PBS_JOBFS}/${ASSEMBLY} ${PBS_JOBFS}/${READS} | \
+   samtools sort -m 3g -T ${PBS_JOBFS}/sort_tmp -@ ${PBS_NCPUS} > ${PBS_JOBFS}/sorted_mapped_reads.bam
 samtools index -@ ${PBS_NCPUS} ${PBS_JOBFS}/sorted_mapped_reads.bam
 
 echo ---copy back---
