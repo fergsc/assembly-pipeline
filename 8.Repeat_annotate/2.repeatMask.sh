@@ -52,7 +52,7 @@ do
       echo "cp $library \${PBS_JOBFS}" >> ${species}RepeatMask.pbs
       echo "cp $fna \${PBS_JOBFS}" >> ${species}RepeatMask.pbs
       echo "" >> ${species}RepeatMask.pbs
-      echo "RepeatMasker -pa ${PBS_NCPUS} -s -lib \${PBS_JOBFS}/$libraryFile \\" >> ${species}RepeatMask.pbs
+      echo "RepeatMasker -pa \${PBS_NCPUS} -s -lib \${PBS_JOBFS}/$libraryFile \\" >> ${species}RepeatMask.pbs
       echo "   -dir $species -e ncbi \\" >> ${species}RepeatMask.pbs
       echo "   \${PBS_JOBFS}/$fnaFile" >> ${species}RepeatMask.pbs
     fi
