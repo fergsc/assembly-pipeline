@@ -16,7 +16,7 @@ do
     genome=`find $species -name '*.contigs.fasta'`
     dir=`echo $blob | awk '{split($0,a,"/"); print "/g/data/xe2/scott/assembly/" a[1] "/" a[2] "/" a[3]}'`
     echo "cd $dir"
-    echo "/g/data/xe2/scott/gadi_modules/blobtools/blobtools create -i /g/data/xe2/scott/assembly/${genome} -b sorted_mapped_reads.bam -t blast.out -o conta$"
+    echo "/g/data/xe2/scott/gadi_modules/blobtools/blobtools create -i /g/data/xe2/scott/assembly/${genome} -b sorted_mapped_reads.bam -t blast.out -o contamination"
     echo "/g/data/xe2/scott/gadi_modules/blobtools/blobtools plot -i contamination.blobDB.json -o blobP"
     echo "/g/data/xe2/scott/gadi_modules/blobtools/blobtools view -i contamination.blobDB.json -o blobV"
     echo ""
