@@ -156,8 +156,7 @@ for syriEvent in syriFile:
         elif syriEvent[5] == "Chr10":
             useChrB = 9
         elif syriEvent[5] == "Chr11":
-            useChrAB= 10
-
+            useChrB = 10
         for gene in qryGenes[useChrB]:
             startIn =  inRegion(gene[1], [int(syriEvent[6]), int(syriEvent[7])])
             endIn = inRegion(gene[2], [int(syriEvent[6]), int(syriEvent[7])])
