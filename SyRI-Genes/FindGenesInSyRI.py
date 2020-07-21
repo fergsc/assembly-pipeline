@@ -4,7 +4,7 @@ import sys
 import csv
 
 def loadGenes(filename):
-    tsv_file = open(filename)
+    tsv_file = open(filename, "r")
     geneFile = csv.reader(tsv_file, delimiter="\t")
     chr01=[]
     chr02=[]
@@ -49,11 +49,12 @@ def loadGenes(filename):
 def inRegion(x, region):
     if region[0] < region[1]:
         return x > region[0] and x < region[1]
-    if region[0] > region[1]:
+    elif region[0] > region[1]:
         return x > region[1] and x < region[0]
-    return False
+    else:
+        return False
 
-syriFile = sys.argv[1] 
+syriFile = sys.argv[1]
 refSpecies = ntpath.basename(syriFile).split("~")[0]
 qrySpecies = ntpath.basename(syriFile).split("~")[1]
 qrySpecies = qrySpecies.split(".")[0]
@@ -76,18 +77,18 @@ print("ref:{}\nqry:{}".format(refSpecies, qrySpecies))
 
 #
 #open files
-tsv_file = open(syriFile)
+tsv_file = open(syriFile, "r")
 syriFile = csv.reader(tsv_file, delimiter="\t")
 
 refGenes = loadGenes("{}.genes".format(refSpecies))
 qryGenes = loadGenes("{}.genes".format(qrySpecies))
 
 #syriGenes = []
-refOutput = open("{}~{}~{}.syrigenes".format(refSpecies, qrySpecies, refSpecies),"w+")
-qryOutput = open("{}~{}~{}.syrigenes".format(refSpecies, qrySpecies, qrySpecies),"w+")
+refOutput = open("{}~{}~{}.syrigenes".format(refSpecies, qrySpecies, refSpecies),"w")
+qryOutput = open("{}~{}~{}.syrigenes".format(refSpecies, qrySpecies, qrySpecies),"w")
 
-refOutput.write("SyRIID,type,GeneId\n")
-qryOutput.write("SyRIID,type,GeneId\n")
+refOutput.write("syriID,type,geneId,geneLocation,dupType\n")
+qryOutput.write("syriID,type,geneId,geneLocation,dupType\n")
 
 for syriEvent in syriFile:
     # refChr = syriEvent[0]
@@ -99,81 +100,96 @@ for syriEvent in syriFile:
     # uID = syriEvent[8]
     # directionB = syriEvent[9]
     # type = syriEvent[10]
-    # Copy status = syriEvent[11]
-    if syriEvent[10] in ["DUP", "INV", "INVDP", "INVTR", "SYN", "TRANS", "NOTAL"]:
+    # DUP Copy status = syriEvent[11]
+    if syriEvent[10] in ["DUP", "INV", "INVDP", "INVTR", "SYN", "TRANS"]:
         if syriEvent[0] != "-":
-            # filter out NOTAL that are not in this genome
-            if syriEvent[11] != "copygain":
-                # filter out copy gains that are not in this genome
-                if syriEvent[0] == "Chr01":
-                    useChrA = 0
-                elif syriEvent[0] == "Chr02":
-                    useChrA = 1
-                elif syriEvent[0] == "Chr03":
-                    useChrA = 2
-                elif syriEvent[0] == "Chr04":
-                    useChrA = 3
-                elif syriEvent[0] == "Chr05":
-                    useChrA = 4
-                elif syriEvent[0] == "Chr06":
-                    useChrA = 5
-                elif syriEvent[0] == "Chr07":
-                    useChrA = 6
-                elif syriEvent[0] == "Chr08":
-                    useChrA = 7
-                elif syriEvent[0] == "Chr09":
-                    useChrA = 8
-                elif syriEvent[0] == "Chr10":
-                    useChrA = 9
-                elif syriEvent[0] == "Chr11":
-                    useChrA = 10
-                for gene in refGenes[useChrA]:
-                    startIn =  inRegion(gene[1], [int(syriEvent[1]), int(syriEvent[2])])
-                    endIn = inRegion(gene[2], [int(syriEvent[1]), int(syriEvent[2])])
+            if syriEvent[0] == "Chr01":
+                useChrA = 0
+            elif syriEvent[0] == "Chr02":
+                useChrA = 1
+            elif syriEvent[0] == "Chr03":
+                useChrA = 2
+            elif syriEvent[0] == "Chr04":
+                useChrA = 3
+            elif syriEvent[0] == "Chr05":
+                useChrA = 4
+            elif syriEvent[0] == "Chr06":
+                useChrA = 5
+            elif syriEvent[0] == "Chr07":
+                useChrA = 6
+            elif syriEvent[0] == "Chr08":
+                useChrA = 7
+            elif syriEvent[0] == "Chr09":
+                useChrA = 8
+            elif syriEvent[0] == "Chr10":
+                useChrA = 9
+            elif syriEvent[0] == "Chr11":
+                useChrA = 10
+            if syriEvent[11] == "copygain":
+                dupFlag = "loss"
+            elif syriEvent[11] == "copyloss":
+                dupFlag = "gain"
+            else:
+                dupFlag = "-"
+            for gene in refGenes[useChrA]:
+                startIn =  inRegion(gene[1], [int(syriEvent[1]), int(syriEvent[2])])
+                endIn = inRegion(gene[2], [int(syriEvent[1]), int(syriEvent[2])])
 
-                    if(startIn and endIn):
-                        refOutput.write("{},{},{},inside\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(startIn and endIn):
+                    refOutput.write("{},{},{},inside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
 
-                    if(startIn and not endIn):
-                        refOutput.write("{},{},{},start\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(startIn and not endIn):
+                    refOutput.write("{},{},{},start,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
 
-                    if(endIn and not startIn):
-                        refOutput.write("{},{},{},end\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(endIn and not startIn):
+                    refOutput.write("{},{},{},end,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+
+                if(gene[1] < int(syriEvent[1]) and gene[1] < int(syriEvent[2])):
+                    if(gene[2] > int(syriEvent[1]) and gene[2] > int(syriEvent[2])):
+                        refOutput.write("{},{},{},outside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+
         if syriEvent[5] != "-":
-            # filter out NOTAL that are not in this genome
-            if syriEvent[11] != "copyloss": # filter out NOTAL that are not in this genome
-                # filter out copy gains that are not in this genome
-                if syriEvent[5] == "Chr01":
-                    useChrB = 0
-                elif syriEvent[5] == "Chr02":
-                    useChrB = 1
-                elif syriEvent[5] == "Chr03":
-                    useChrB = 2
-                elif syriEvent[5] == "Chr04":
-                    useChrB = 3
-                elif syriEvent[5] == "Chr05":
-                    useChrB = 4
-                elif syriEvent[5] == "Chr06":
-                    useChrB = 5
-                elif syriEvent[5] == "Chr07":
-                    useChrB = 6
-                elif syriEvent[5] == "Chr08":
-                    useChrB = 7
-                elif syriEvent[5] == "Chr09":
-                    useChrB = 8
-                elif syriEvent[5] == "Chr10":
-                    useChrB = 9
-                elif syriEvent[5] == "Chr11":
-                    useChrB= 10
-                for gene in qryGenes[useChrB]:
-                    startIn =  inRegion(gene[1], [int(syriEvent[6]), int(syriEvent[7])])
-                    endIn = inRegion(gene[2], [int(syriEvent[6]), int(syriEvent[7])])
+            if syriEvent[5] == "Chr01":
+                useChrB = 0
+            elif syriEvent[5] == "Chr02":
+                useChrB = 1
+            elif syriEvent[5] == "Chr03":
+                useChrB = 2
+            elif syriEvent[5] == "Chr04":
+                useChrB = 3
+            elif syriEvent[5] == "Chr05":
+                useChrB = 4
+            elif syriEvent[5] == "Chr06":
+                useChrB = 5
+            elif syriEvent[5] == "Chr07":
+                useChrB = 6
+            elif syriEvent[5] == "Chr08":
+                useChrB = 7
+            elif syriEvent[5] == "Chr09":
+                useChrB = 8
+            elif syriEvent[5] == "Chr10":
+                useChrB = 9
+            elif syriEvent[5] == "Chr11":
+                useChrB= 10
+            if syriEvent[11] == "copygain":
+                dupFlag = "gain"
+            elif syriEvent[11] == "copyloss":
+                dupFlag = "loss"
+            else:
+                dupFlag = "-" 
+            for gene in qryGenes[useChrB]:
+                startIn =  inRegion(gene[1], [int(syriEvent[6]), int(syriEvent[7])])
+                endIn = inRegion(gene[2], [int(syriEvent[6]), int(syriEvent[7])])
 
-                    if(startIn and endIn):
-                        qryOutput.write("{},{},{},inside\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(startIn and endIn):
+                    qryOutput.write("{},{},{},inside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
 
-                    if(startIn and not endIn):
-                        qryOutput.write("{},{},{},start\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(startIn and not endIn):
+                    qryOutput.write("{},{},{},start,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
 
-                    if(endIn and not startIn):
-                        qryOutput.write("{},{},{},end\n".format(syriEvent[8], syriEvent[10], gene[0]))
+                if(endIn and not startIn):
+                    qryOutput.write("{},{},{},end,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+
+                if(gene[1] < int(syriEvent[6]) and gene[1] < int(syriEvent[7])):
+                    if(gene[2] > int(syriEvent[6]) and gene[2] > int(syriEvent[7])):
+                        refOutput.write("{},{},{},outside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
