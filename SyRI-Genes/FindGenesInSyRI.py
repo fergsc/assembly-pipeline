@@ -131,22 +131,29 @@ for syriEvent in syriFile:
                 dupFlag = "gain"
             else:
                 dupFlag = "-"
+            geneA = False
             for gene in refGenes[useChrA]:
                 startIn =  inRegion(gene[1], [int(syriEvent[1]), int(syriEvent[2])])
                 endIn = inRegion(gene[2], [int(syriEvent[1]), int(syriEvent[2])])
 
                 if(startIn and endIn):
                     refOutput.write("{},{},{},inside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneA = True
 
                 if(startIn and not endIn):
                     refOutput.write("{},{},{},start,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneA = True
 
                 if(endIn and not startIn):
                     refOutput.write("{},{},{},end,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneA = True
 
                 if(gene[1] < int(syriEvent[1]) and gene[1] < int(syriEvent[2])):
                     if(gene[2] > int(syriEvent[1]) and gene[2] > int(syriEvent[2])):
                         refOutput.write("{},{},{},outside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                        geneA = True
+            if geneA == False:
+                refOutput.write("{},{},-,-,-\n".format(syriEvent[8], syriEvent[10]))
 
         if syriEvent[5] != "-":
             if syriEvent[5] == "Chr01":
@@ -177,19 +184,26 @@ for syriEvent in syriFile:
                 dupFlag = "loss"
             else:
                 dupFlag = "-" 
+            geneB = False
             for gene in qryGenes[useChrB]:
                 startIn =  inRegion(gene[1], [int(syriEvent[6]), int(syriEvent[7])])
                 endIn = inRegion(gene[2], [int(syriEvent[6]), int(syriEvent[7])])
 
                 if(startIn and endIn):
                     qryOutput.write("{},{},{},inside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneB = True
 
                 if(startIn and not endIn):
                     qryOutput.write("{},{},{},start,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneB = True
 
                 if(endIn and not startIn):
                     qryOutput.write("{},{},{},end,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                    geneB = True
 
                 if(gene[1] < int(syriEvent[6]) and gene[1] < int(syriEvent[7])):
                     if(gene[2] > int(syriEvent[6]) and gene[2] > int(syriEvent[7])):
-                        refOutput.write("{},{},{},outside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                        qryOutput.write("{},{},{},outside,{}\n".format(syriEvent[8], syriEvent[10], gene[0], dupFlag))
+                        geneB = True
+            if geneB == False:
+                qryOutput.write("{},{},-,-,-\n".format(syriEvent[8], syriEvent[10]))
